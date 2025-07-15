@@ -39,7 +39,7 @@ def notify(title, message):
 from PIL import ImageDraw
 
 
-def record_screen(ts, start_event):
+def record_screen(ts, start_event, status_callback=None):
     """Record screen as video first, then convert to GIF"""
     video_file = f"screen_{ts}.mp4"
     gif_file = f"screen_{ts}.gif"
@@ -129,7 +129,8 @@ def record_screen(ts, start_event):
     return gif_file
 
 
-def record_audio(ts, start_event):
+def record_audio(ts, start_event, status_callback=None):
+
     """Records audio and saves as WAV"""
     wav_file = f"audio_{ts}.wav"
     print(f"🎵 Audio recording ready, waiting for start signal...")
@@ -155,77 +156,56 @@ def record_audio(ts, start_event):
         
     return wav_file
 
-def record():
+def record(status_callback=None):
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    notify("Recording", f"Recording screen and audio for {RECORD_TIME} seconds...")
     print(f"🔴 Starting recording session: {ts}")
+    notify("Recording", f"Recording screen and audio for {RECORD_TIME} seconds...")
 
-    # Create a shared start time for both recordings
+    if status_callback:
+        status_callback("🔴 Recording started...")
+
     start_event = threading.Event()
-    
-    screen_thread = threading.Thread(target=record_screen, args=(ts, start_event))
-    audio_thread = threading.Thread(target=record_audio, args=(ts, start_event))
-    
+
+    screen_thread = threading.Thread(target=record_screen, args=(ts, start_event, status_callback))
+    audio_thread = threading.Thread(target=record_audio, args=(ts, start_event, status_callback))
+
     screen_thread.start()
     audio_thread.start()
-    
-    # Small delay to ensure both threads are ready
+
     time.sleep(0.1)
-    
-    # Signal both threads to start recording simultaneously
     start_event.set()
-    print(f"🎬 Recording started at: {time.perf_counter()}")
-    
+
+    if status_callback:
+        for i in range(RECORD_TIME, 0, -1):
+            status_callback(f"⏳ {i} seconds remaining...")
+            time.sleep(1)
+
+
+     # Start animated loading spinner in separate thread
+    loading = True
+    def loading_spinner():
+        dots = 0
+        while loading:
+            status_callback("🔄 Saving" + "." * (dots % 4))
+            dots += 1
+            time.sleep(0.5)
+
+    spinner_thread = threading.Thread(target=loading_spinner, daemon=True)
+    spinner_thread.start()
+
+    # Wait for recordings to finish
     screen_thread.join()
     audio_thread.join()
+
+    # Stop spinner
+    loading = False
+    spinner_thread.join(timeout=0.1)
+
+    if status_callback:
+        status_callback("✅ Recording session complete. Files saved!")
 
     notify("Done", "Recording complete. Files saved.")
     print(f"✅ Recording session complete: screen_{ts}.mp4, screen_{ts}.gif & audio_{ts}.wav")
 
-def on_hotkey():
-    threading.Thread(target=record, daemon=True).start()
 
-def create_image():
-    """Creates a basic icon image for tray"""
-    image = Image.new('RGB', (64, 64), color=(0, 102, 204))  # blue
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((16, 16, 48, 48), fill='white')
-    return image
-
-def setup_tray():
-    icon = Icon("QA Recorder")
-
-    def quit_app(icon, item):
-        notify("Exiting", "QA Recorder has been closed.")
-        icon.stop()
-        os._exit(0)
-
-    icon.icon = create_image()
-    icon.menu = Menu(
-        MenuItem('Quit', quit_app)
-    )
-
-    # Start listening for hotkey
-    keyboard.add_hotkey('ctrl+shift+r', on_hotkey)
-
-    notify("QA Recorder", "App is running in the background.\nPress Ctrl+Shift+R to record.")
-    icon.run()
-
-# mouse listener to detect clicks
-def on_click(x, y, button, pressed):
-    global mouse_clicked, last_click_time
-    if pressed:
-        mouse_clicked = True
-        last_click_time = time.perf_counter()
-        print(f"🖱️ Click detected at ({x}, {y})")
-    else:
-        mouse_clicked = False
-
-# MAIN
-if __name__ == '__main__':
-    # Start mouse listener first
-    mouse_listener = mouse.Listener(on_click=on_click)
-    mouse_listener.start()
-    
-    # Setup tray (this will block until app exits)
-    setup_tray()
+# test 1 test2 test3... 
