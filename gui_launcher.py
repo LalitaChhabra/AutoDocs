@@ -5,7 +5,7 @@ from av_trigger import record  # make sure this is the file where your modified 
 def start_gui():
     def start_recording():
         # Clear any previous status and start a new thread
-        update_status("🔴 Starting recording...")
+        update_status("🔴 Start AutoDocs Generation...")
 
         def threaded_record():
             try:
@@ -21,10 +21,10 @@ def start_gui():
 
     # Setup GUI window
     root = tk.Tk()
-    root.title("QA Recorder")
+    root.title("AutoDocs")
 
-    tk.Label(root, text="QA Recorder").pack(pady=(10, 5))
-    tk.Button(root, text="Start Recording", command=start_recording).pack(pady=5)
+    tk.Label(root, text="AI Hackathon 2025").pack(pady=(10, 5))
+    tk.Button(root, text="Start AutoDocs Generation...", command=start_recording).pack(pady=5)
     tk.Button(root, text="Exit", command=root.quit).pack(pady=5)
 
     # Status label
