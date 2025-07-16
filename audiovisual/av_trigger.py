@@ -179,7 +179,7 @@ def record(duration=None, status_callback=None):
     start_event.set()
 
     if status_callback:
-        for i in range(RECORD_TIME, 0, -1):
+        for i in range(duration, 0, -1):
             status_callback(f"⏳ {i} seconds remaining...")
             time.sleep(1)
 
@@ -189,7 +189,8 @@ def record(duration=None, status_callback=None):
     def loading_spinner():
         dots = 0
         while loading:
-            status_callback("🔄 Saving" + "." * (dots % 4))
+            if status_callback:
+                status_callback("🔄 Saving" + "." * (dots % 4))
             dots += 1
             time.sleep(0.5)
 
@@ -263,11 +264,11 @@ def on_hotkey():
     """Hotkey handler for Ctrl+Shift+R"""
     threading.Thread(target=record, args=(15,), daemon=True).start()
 
+# Start mouse listener when module is imported
+mouse_listener = mouse.Listener(on_click=on_click)
+mouse_listener.start()
+
 # MAIN
 if __name__ == '__main__':
-    # Start mouse listener first
-    mouse_listener = mouse.Listener(on_click=on_click)
-    mouse_listener.start()
-    
     # Setup tray (this will block until app exits)
     setup_tray()
