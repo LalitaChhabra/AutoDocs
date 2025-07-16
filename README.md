@@ -104,5 +104,5 @@ The Whisper API supports various audio formats including:
 
 - `openai>=1.0.0` - Azure OpenAI Python SDK
 - `requests` - HTTP library for API calls
-- `python-dotenv` - Environment variable management
 
+- `python-dotenv` - Environment variable management
