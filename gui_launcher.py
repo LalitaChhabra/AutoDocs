@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-from av_trigger import record  # make sure this is the file where your modified record() lives
+from audiovisual.av_trigger import record  # make sure this is the file where your modified record() lives
 
 def start_gui():
     def start_recording():
