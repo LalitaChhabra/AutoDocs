@@ -24,7 +24,7 @@ click_duration = 0.5  # how long to show click highlight (seconds)
 
 
 # SETTINGS
-RECORD_TIME = 15  # seconds
+RECORD_TIME = 15  # seconds (default)
 SAMPLE_RATE = 48000
 CHANNELS = 1
 SAMPWIDTH = 2
@@ -39,7 +39,7 @@ def notify(title, message):
 from PIL import ImageDraw
 
 
-def record_screen(ts, start_event):
+def record_screen(ts, start_event, duration):
     """Record screen as video first, then convert to GIF"""
     video_file = f"screen_{ts}.mp4"
     gif_file = f"screen_{ts}.gif"
@@ -63,7 +63,7 @@ def record_screen(ts, start_event):
     
     frames_for_gif = []
     
-    while (time.perf_counter() - start_time) < RECORD_TIME:
+    while (time.perf_counter() - start_time) < duration:
         now = time.perf_counter()
         if now >= next_capture_time:
             try:
@@ -129,7 +129,7 @@ def record_screen(ts, start_event):
     return gif_file
 
 
-def record_audio(ts, start_event):
+def record_audio(ts, start_event, duration):
     """Records audio and saves as WAV"""
     wav_file = f"audio_{ts}.wav"
     print(f"🎵 Audio recording ready, waiting for start signal...")
@@ -141,7 +141,7 @@ def record_audio(ts, start_event):
         start_time = time.perf_counter()
         print(f"🎵 Audio recording started at: {start_time}")
         
-        audio = sd.rec(int(RECORD_TIME * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=CHANNELS)
+        audio = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=CHANNELS)
         sd.wait()
         
         end_time = time.perf_counter()
@@ -155,16 +155,19 @@ def record_audio(ts, start_event):
         
     return wav_file
 
-def record():
+def record(duration=None):
+    if duration is None:
+        duration = RECORD_TIME
+    
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    notify("Recording", f"Recording screen and audio for {RECORD_TIME} seconds...")
+    notify("Recording", f"Recording screen and audio for {duration} seconds...")
     print(f"🔴 Starting recording session: {ts}")
 
     # Create a shared start time for both recordings
     start_event = threading.Event()
     
-    screen_thread = threading.Thread(target=record_screen, args=(ts, start_event))
-    audio_thread = threading.Thread(target=record_audio, args=(ts, start_event))
+    screen_thread = threading.Thread(target=record_screen, args=(ts, start_event, duration))
+    audio_thread = threading.Thread(target=record_audio, args=(ts, start_event, duration))
     
     screen_thread.start()
     audio_thread.start()
@@ -200,15 +203,27 @@ def setup_tray():
         icon.stop()
         os._exit(0)
 
+    def record_10_seconds(icon, item):
+        threading.Thread(target=record, args=(10,), daemon=True).start()
+
+    def record_15_seconds(icon, item):
+        threading.Thread(target=record, args=(15,), daemon=True).start()
+
+    def record_20_seconds(icon, item):
+        threading.Thread(target=record, args=(20,), daemon=True).start()
+
     icon.icon = create_image()
     icon.menu = Menu(
+        MenuItem('Record 10 seconds', record_10_seconds),
+        MenuItem('Record 15 seconds', record_15_seconds),
+        MenuItem('Record 20 seconds', record_20_seconds),
         MenuItem('Quit', quit_app)
     )
 
-    # Start listening for hotkey
+    # Start listening for hotkey (defaults to 15 seconds)
     keyboard.add_hotkey('ctrl+shift+r', on_hotkey)
 
-    notify("QA Recorder", "App is running in the background.\nPress Ctrl+Shift+R to record.")
+    notify("QA Recorder", "App is running in the background.\nPress Ctrl+Shift+R to record (15s) or right-click tray for more options.")
     icon.run()
 
 # mouse listener to detect clicks
