@@ -160,6 +160,7 @@ def record(duration=None, status_callback=None):
         duration = RECORD_TIME
     
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    notify("Recording", f"Recording screen and audio for {duration} seconds...")
     print(f"🔴 Starting recording session: {ts}")
 
     if status_callback:
@@ -187,8 +188,7 @@ def record(duration=None, status_callback=None):
     def loading_spinner():
         dots = 0
         while loading:
-            if status_callback:
-                status_callback("🔄 Saving" + "." * (dots % 4))
+            status_callback("🔄 Saving" + "." * (dots % 4))
             dots += 1
             time.sleep(0.5)
 
@@ -259,14 +259,14 @@ def on_click(x, y, button, pressed):
         mouse_clicked = False
 
 def on_hotkey():
-    """Hotkey handler for Ctrl+Shift+R"""
+    """Handle hotkey press for recording"""
     threading.Thread(target=record, args=(15,), daemon=True).start()
-
-# Start mouse listener when module is imported
-mouse_listener = mouse.Listener(on_click=on_click)
-mouse_listener.start()
 
 # MAIN
 if __name__ == '__main__':
+    # Start mouse listener first
+    mouse_listener = mouse.Listener(on_click=on_click)
+    mouse_listener.start()
+    
     # Setup tray (this will block until app exits)
     setup_tray()

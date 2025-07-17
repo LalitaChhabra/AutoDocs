@@ -9,5 +9,3 @@ pillow
 pystray
 plyer
 pynput
-PyQt5
-numpy
