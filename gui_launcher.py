@@ -61,8 +61,9 @@ class AutoDocsBar(QtWidgets.QWidget):
 
         # Layout inside background
         self.layout = QtWidgets.QHBoxLayout(self.bg)
-        self.layout.setContentsMargins(10, 10, 10, 10)
-        self.layout.setSpacing(8)
+        self.layout.setContentsMargins(16, 10, 16, 10)  # More margin left/right
+        self.layout.setSpacing(12)  # More space between widgets
+
 
         self.status_label = QtWidgets.QLabel('🎥 AutoDocs Recorder Ready')
         self.status_label.setStyleSheet('color: #333333; font-size: 14px; font-weight: bold;')
@@ -71,12 +72,19 @@ class AutoDocsBar(QtWidgets.QWidget):
         # Duration selection buttons
         self.duration_frame = QtWidgets.QFrame()
         self.duration_layout = QtWidgets.QHBoxLayout(self.duration_frame)
-        self.duration_layout.setContentsMargins(0, 0, 0, 0)
-        self.duration_layout.setSpacing(4)
+        self.duration_layout.setSpacing(10)
+        self.duration_layout.setContentsMargins(6, 0, 6, 0)
+        # btn.setFixedSize(45, 28)  # wider and taller
+        # btn.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+
+
+
 
         # Duration buttons
         self.duration_buttons = []
         self.selected_duration = 15  # Default duration
+
+        
         
         for duration in [10, 15, 20]:
             btn = QtWidgets.QPushButton(f'{duration}s')
