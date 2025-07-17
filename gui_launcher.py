@@ -15,6 +15,25 @@ class AutoDocsBar(QtWidgets.QWidget):
         self.current_theme = None  # Track current theme to prevent unnecessary updates
         self.is_minimized = False
         self.init_ui()
+        
+        # Enable hover tracking and mouse tracking
+        self.setAttribute(QtCore.Qt.WA_Hover)  # ✅ fixed
+        self.setMouseTracking(True)
+        self.bg.setMouseTracking(True)
+
+
+
+    def event(self, e):
+        if e.type() == QtCore.QEvent.HoverEnter:
+            if self.is_minimized:
+                self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 140); border-radius: 4px;')
+        elif e.type() == QtCore.QEvent.HoverLeave:
+            if self.is_minimized:
+                self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 50); border-radius: 4px;')
+        return super().event(e)
+
+        
+
 
     def init_ui(self):
         # Initial size and position
@@ -167,10 +186,12 @@ class AutoDocsBar(QtWidgets.QWidget):
 
         self.minimal_label = QtWidgets.QLabel('🔴 Recording...')
         self.minimal_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.minimal_label.setStyleSheet('color: red; font-size: 13px; font-weight: bold;')
+        self.minimal_label.setStyleSheet('color: rgba(255, 0, 0, 100); font-size: 12px; font-weight: bold;')
+
         self.layout.addWidget(self.minimal_label)
 
-        self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 180); border-radius: 4px;')
+        self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 50); border-radius: 4px;')
+
         self.update()
 
 
@@ -356,6 +377,19 @@ class AutoDocsBar(QtWidgets.QWidget):
             self.move(event.globalPos() - self.drag_position)
             self.update_theme()
             event.accept()
+
+    def event(self, e):
+        if self.is_minimized and self.minimal_label:
+            if e.type() == QtCore.QEvent.HoverEnter:
+                # Make text and bar more opaque on hover
+                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 0.9); font-size: 12px; font-weight: bold;")
+                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 220); border-radius: 4px;")
+            elif e.type() == QtCore.QEvent.HoverLeave:
+                # Make text and bar more transparent when not hovered
+                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 0.2); font-size: 12px; font-weight: bold;")
+                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 120); border-radius: 4px;")
+        return super().event(e)
+
 
 def run_app():
     app = QtWidgets.QApplication(sys.argv)
