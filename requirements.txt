@@ -1,0 +1,13 @@
+pyautogui
+sounddevice
+opencv-python
+numpy
+imageio
+wavio
+keyboard
+pillow
+pystray
+plyer
+pynput
+PyQt5
+numpy
