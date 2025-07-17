@@ -160,9 +160,7 @@ def record(duration=None, status_callback=None):
         duration = RECORD_TIME
     
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    notify("Recording", f"Recording screen and audio for {duration} seconds...")
     print(f"🔴 Starting recording session: {ts}")
-    notify("Recording", f"Recording screen and audio for {RECORD_TIME} seconds...")
 
     if status_callback:
         status_callback("🔴 Recording started...")
