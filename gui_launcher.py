@@ -1,5 +1,6 @@
 import sys
 import threading
+import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 from autodocs_orchestrator import AutoDocsOrchestrator
 import numpy as np
@@ -243,24 +244,17 @@ class AutoDocsBar(QtWidgets.QWidget):
         self.current_theme = None  # Track current theme to prevent unnecessary updates
         self.is_minimized = False
         self.init_ui()
-        
+
+        # 1) a timer for our countdown
+        self.countdown_timer = QtCore.QTimer(self)
+        self.countdown_timer.setInterval(1000)  # 1 s
+        self.countdown_timer.timeout.connect(self._update_countdown)
+        self.remaining_time = 0
+
         # Enable hover tracking and mouse tracking
         self.setAttribute(QtCore.Qt.WA_Hover)
         self.setMouseTracking(True)
         self.bg.setMouseTracking(True)
-
-
-
-    def event(self, e):
-        if e.type() == QtCore.QEvent.HoverEnter:
-            if self.is_minimized:
-                self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 140); border-radius: 4px;')
-        elif e.type() == QtCore.QEvent.HoverLeave:
-            if self.is_minimized:
-                self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 50); border-radius: 4px;')
-        return super().event(e)
-
-        
 
 
     def init_ui(self):
@@ -363,6 +357,31 @@ class AutoDocsBar(QtWidgets.QWidget):
         def update_ui():
             if self.is_minimized and hasattr(self, "minimal_label") and self.minimal_label:
                 self.minimal_label.setText(status)
+                
+                # Determine color based on status type with improved detection
+                if "Recording" in status or "🔴" in status or "⏳" in status:
+                    color = "rgba(255, 0, 0, 180)"  # Red for recording/countdown
+                elif "Saving" in status or "🔄" in status or "..." in status:
+                    color = "rgba(255, 165, 0, 180)"  # Orange for saving/processing
+                elif "✅" in status or "complete" in status.lower() or "recorded!" in status.lower():
+                    color = "rgba(0, 128, 0, 180)"  # Green for success
+                elif "❌" in status or "failed" in status.lower() or "error" in status.lower():
+                    color = "rgba(255, 0, 0, 180)"  # Red for error
+                else:
+                    color = "rgba(100, 100, 100, 180)"  # Gray for other statuses
+                
+                self.minimal_label.setStyleSheet(f'color: {color}; font-size: 14px; font-weight: bold; padding: 8px;')
+                
+                # Adjust background opacity based on status urgency
+                if "Recording" in status or "🔴" in status or "⏳" in status:
+                    bg_opacity = "120"  # More visible during recording/countdown
+                elif "Saving" in status or "🔄" in status:
+                    bg_opacity = "100"  # Visible during processing
+                else:
+                    bg_opacity = "80"   # Less visible for other statuses
+                
+                self.bg.setStyleSheet(f'background-color: rgba(255, 255, 255, {bg_opacity}); border-radius: 6px;')
+                
             elif not self.is_minimized and hasattr(self, "status_label") and self.status_label:
                 self.status_label.setText(status)
         
@@ -406,9 +425,24 @@ class AutoDocsBar(QtWidgets.QWidget):
             if widget:
                 widget.setParent(None)
 
-        self.minimal_label = QtWidgets.QLabel('🔴 Recording...')
+        # Initialize minimal label with current status or default
+        current_status = self.status_label.text() if hasattr(self, 'status_label') and self.status_label else '🔴 Recording...'
+        self.minimal_label = QtWidgets.QLabel(current_status)
         self.minimal_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.minimal_label.setStyleSheet('color: rgba(255, 0, 0, 180); font-size: 14px; font-weight: bold; padding: 8px;')
+        
+        # Set initial styling based on current status
+        if "Recording" in current_status or "🔴" in current_status:
+            color = "rgba(255, 0, 0, 180)"  # Red for recording
+        elif "Saving" in current_status or "🔄" in current_status:
+            color = "rgba(255, 165, 0, 180)"  # Orange for saving
+        elif "✅" in current_status:
+            color = "rgba(0, 128, 0, 180)"  # Green for success
+        elif "❌" in current_status:
+            color = "rgba(255, 0, 0, 180)"  # Red for error
+        else:
+            color = "rgba(100, 100, 100, 180)"  # Gray for other statuses
+            
+        self.minimal_label.setStyleSheet(f'color: {color}; font-size: 14px; font-weight: bold; padding: 8px;')
 
         self.layout.addWidget(self.minimal_label)
         self.layout.setContentsMargins(8, 4, 8, 4)  # Add proper margins for text visibility
@@ -455,38 +489,65 @@ class AutoDocsBar(QtWidgets.QWidget):
 
 
     def start_recording(self, title=None, duration=15):
-        self.update_status_clean(f'🔴 Recording {duration}s clip...')
+
+        # initialize countdown
+        self.remaining_time = duration
+        self.countdown_timer.start()
         self.minimize_bar()
+        # show initial countdown
+        self.update_status_clean(f'🔴 Recording {self.remaining_time}s clip...')
+
 
         def run_recording():
             try:
                 # Use orchestrator to record clip (without auto-processing like interactive mode)
-                clip = self.orchestrator.record_clip(
-                    duration=duration, 
-                    title=title
-                )
-                
+                clip = self.orchestrator.record_clip(duration=duration,
+                                                    title=title)
+
+                # 2) stop the countdown now that recording is done
+                QtCore.QTimer.singleShot(0, self.countdown_timer.stop)
+
+                # 3) show saving status
+                QtCore.QTimer.singleShot(0,
+                    lambda: self.update_status_clean("⏳ Saving clip…"))
+
+                # (assume the orchestrator has finished persisting by now)
+
                 # Update status - just recorded, not processed yet (like interactive mode)
-                success_msg = f"✅ Clip '{clip['title']}' recorded! Use Manage to process or Generate to auto-process all."
-                self.update_status_clean(success_msg)
+                self.update_status_clean(f"✅ Clip '{clip['title']}' recorded! Use Manage to process or Generate to auto-process all.")
+                # Auto-restore after showing success message briefly
+                QtCore.QTimer.singleShot(500,
+                    lambda: self.update_status_clean(
+                        f"✅ Clip '{clip['title']}' recorded! Use Manage to process or Generate to auto-process all."
+                    ))
+                def delayed_restore():
+                    time.sleep(3)  # Show success message for 3 seconds
+                    QtCore.QTimer.singleShot(0, self.restore_bar)
+                
+                threading.Thread(target=delayed_restore, daemon=True).start()
                 
             except Exception as e:
                 print(f'Error during recording: {e}')
                 error_msg = f"❌ Recording failed: {str(e)}"
                 self.update_status_clean(error_msg)
-            finally:
-                # Use a signal/slot approach instead of QTimer in thread
+                
+                # Auto-restore after showing error message briefly
                 def delayed_restore():
-                    import time
-                    time.sleep(3)
-                    if QtCore.QThread.currentThread() == QtWidgets.QApplication.instance().thread():
-                        self.restore_bar()
-                    else:
-                        QtCore.QTimer.singleShot(0, self.restore_bar)
+                    time.sleep(3)  # Show error message for 3 seconds
+                    QtCore.QTimer.singleShot(0, self.restore_bar)
                 
                 threading.Thread(target=delayed_restore, daemon=True).start()
 
         threading.Thread(target=run_recording, daemon=True).start()
+    
+    def _update_countdown(self):
+        if self.remaining_time > 0:
+            self.remaining_time -= 1
+            self.update_status_clean(f'🔴 Recording {self.remaining_time}s clip...')
+        else:
+            self.countdown_timer.stop()
+            self.update_status_clean(f'🔄 Saving clip...')
+
 
     def show_generate_menu(self):
         """Show generation options - processes clips automatically like interactive mode"""
@@ -756,13 +817,43 @@ Clips List:
     def event(self, e):
         if self.is_minimized and hasattr(self, 'minimal_label') and self.minimal_label:
             if e.type() == QtCore.QEvent.HoverEnter:
-                # Make text and bar more opaque on hover
-                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 220); font-size: 14px; font-weight: bold; padding: 8px;")
+                # Get current text to determine appropriate color for hover state
+                status = self.minimal_label.text()
+                if "Recording" in status or "🔴" in status or "⏳" in status:
+                    hover_color = "rgba(255, 0, 0, 220)"  # Brighter red for recording/countdown
+                elif "Saving" in status or "🔄" in status or "..." in status:
+                    hover_color = "rgba(255, 165, 0, 220)"  # Brighter orange for saving/processing
+                elif "✅" in status or "complete" in status.lower() or "recorded!" in status.lower():
+                    hover_color = "rgba(0, 128, 0, 220)"  # Brighter green for success
+                elif "❌" in status or "failed" in status.lower() or "error" in status.lower():
+                    hover_color = "rgba(255, 0, 0, 220)"  # Brighter red for error
+                else:
+                    hover_color = "rgba(100, 100, 100, 220)"  # Brighter gray for other
+                
+                self.minimal_label.setStyleSheet(f"color: {hover_color}; font-size: 14px; font-weight: bold; padding: 8px;")
                 self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 160); border-radius: 6px;")
+                
             elif e.type() == QtCore.QEvent.HoverLeave:
-                # Make text and bar more transparent when not hovered
-                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 180); font-size: 14px; font-weight: bold; padding: 8px;")
-                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 80); border-radius: 6px;")
+                # Restore original opacity based on current status
+                status = self.minimal_label.text()
+                if "Recording" in status or "🔴" in status or "⏳" in status:
+                    normal_color = "rgba(255, 0, 0, 180)"  # Red for recording/countdown
+                    bg_opacity = "120"
+                elif "Saving" in status or "🔄" in status or "..." in status:
+                    normal_color = "rgba(255, 165, 0, 180)"  # Orange for saving/processing
+                    bg_opacity = "100"
+                elif "✅" in status or "complete" in status.lower() or "recorded!" in status.lower():
+                    normal_color = "rgba(0, 128, 0, 180)"  # Green for success
+                    bg_opacity = "80"
+                elif "❌" in status or "failed" in status.lower() or "error" in status.lower():
+                    normal_color = "rgba(255, 0, 0, 180)"  # Red for error
+                    bg_opacity = "80"
+                else:
+                    normal_color = "rgba(100, 100, 100, 180)"  # Gray for other
+                    bg_opacity = "80"
+                
+                self.minimal_label.setStyleSheet(f"color: {normal_color}; font-size: 14px; font-weight: bold; padding: 8px;")
+                self.bg.setStyleSheet(f"background-color: rgba(255, 255, 255, {bg_opacity}); border-radius: 6px;")
         return super().event(e)
 
 
