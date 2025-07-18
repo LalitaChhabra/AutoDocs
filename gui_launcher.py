@@ -10,7 +10,8 @@ class ClipRecordDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, clip_count=0):
         super().__init__(parent)
         self.setWindowTitle("Record New Clip")
-        self.setFixedSize(400, 250)
+        self.setMinimumSize(700, 400)  # Increased from 400, 250
+        self.setFixedSize(700, 400)    # Match minimum size
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
         
         # Results
@@ -21,6 +22,10 @@ class ClipRecordDialog(QtWidgets.QDialog):
     
     def setup_ui(self, clip_count):
         layout = QtWidgets.QVBoxLayout(self)
+
+        # Add more padding/spacing
+        # layout.setContentsMargins(20, 20, 20, 20)  # Increase margins
+        # layout.setSpacing(15)  # Increase spacing between widgets
         
         # Title section
         title_label = QtWidgets.QLabel("📹 Record New Clip")
@@ -255,6 +260,16 @@ class AutoDocsBar(QtWidgets.QWidget):
         self.setAttribute(QtCore.Qt.WA_Hover)
         self.setMouseTracking(True)
         self.bg.setMouseTracking(True)
+
+        
+        # Set minimum window size
+        self.setMinimumWidth(400)  # Adjust value as needed
+        self.setMinimumHeight(self.normal_height)
+
+
+
+        # Ensure margins are maintained
+        self.layout.setContentsMargins(16, 10, 16, 10)
 
 
     def init_ui(self):
