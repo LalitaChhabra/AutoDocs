@@ -155,14 +155,13 @@ def record_audio(ts, start_event, duration):
         
     return wav_file
 
-def record(duration=None):
+def record(duration=None, status_callback=None):
     if duration is None:
         duration = RECORD_TIME
     
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     notify("Recording", f"Recording screen and audio for {duration} seconds...")
     print(f"🔴 Starting recording session: {ts}")
-    notify("Recording", f"Recording screen and audio for {RECORD_TIME} seconds...")
 
     if status_callback:
         status_callback("🔴 Recording started...")
@@ -179,7 +178,7 @@ def record(duration=None):
     start_event.set()
 
     if status_callback:
-        for i in range(RECORD_TIME, 0, -1):
+        for i in range(duration, 0, -1):
             status_callback(f"⏳ {i} seconds remaining...")
             time.sleep(1)
 
@@ -258,6 +257,10 @@ def on_click(x, y, button, pressed):
         print(f"🖱️ Click detected at ({x}, {y})")
     else:
         mouse_clicked = False
+
+def on_hotkey():
+    """Handle hotkey press for recording"""
+    threading.Thread(target=record, args=(15,), daemon=True).start()
 
 # MAIN
 if __name__ == '__main__':
