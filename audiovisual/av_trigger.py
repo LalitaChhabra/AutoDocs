@@ -160,7 +160,6 @@ def record(duration=None, status_callback=None):
         duration = RECORD_TIME
     
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    notify("Recording", f"Recording screen and audio for {duration} seconds...")
     print(f"🔴 Starting recording session: {ts}")
 
     if status_callback:
@@ -206,7 +205,6 @@ def record(duration=None, status_callback=None):
     if status_callback:
         status_callback("✅ Recording session complete. Files saved!")
 
-    notify("Done", "Recording complete. Files saved.")
     print(f"✅ Recording session complete: screen_{ts}.mp4, screen_{ts}.gif & audio_{ts}.wav")
 
 
@@ -221,7 +219,6 @@ def setup_tray():
     icon = Icon("QA Recorder")
 
     def quit_app(icon, item):
-        notify("Exiting", "QA Recorder has been closed.")
         icon.stop()
         os._exit(0)
 
@@ -245,7 +242,6 @@ def setup_tray():
     # Start listening for hotkey (defaults to 15 seconds)
     keyboard.add_hotkey('ctrl+shift+r', on_hotkey)
 
-    notify("QA Recorder", "App is running in the background.\nPress Ctrl+Shift+R to record (15s) or right-click tray for more options.")
     icon.run()
 
 # mouse listener to detect clicks
