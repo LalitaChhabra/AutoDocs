@@ -9,7 +9,6 @@ import threading
 import keyboard
 import time
 import os
-import sys
 
 from PIL import Image, ImageDraw
 from pystray import Icon, MenuItem, Menu
@@ -17,6 +16,9 @@ from plyer import notification
 
 from pynput import mouse
 from PIL import ImageDraw
+
+# load your custom cursor image
+CURSOR_IMG = Image.open("cursor.png")
 
 mouse_clicked = False  # global flag
 last_click_time = 0  # timestamp of last click
@@ -40,6 +42,7 @@ from PIL import ImageDraw
 
 
 def record_screen(ts, start_event, duration):
+    
     """Record screen as video first, then convert to GIF"""
     video_file = f"screen_{ts}.mp4"
     gif_file = f"screen_{ts}.gif"
@@ -65,47 +68,54 @@ def record_screen(ts, start_event, duration):
     
     while (time.perf_counter() - start_time) < duration:
         now = time.perf_counter()
-        if now >= next_capture_time:
-            try:
-                screenshot = pyautogui.screenshot()
-                cursor_x, cursor_y = pyautogui.position()
-                draw = ImageDraw.Draw(screenshot)
+        if now < next_capture_time:
+            time.sleep(0.005)
+            continue
+        next_capture_time += frame_interval
 
-                # Cursor arrow
-                arrow_size = 10
-                draw.polygon([
-                    (cursor_x, cursor_y),
-                    (cursor_x + arrow_size, cursor_y + 3),
-                    (cursor_x + 3, cursor_y + arrow_size)
-                ], fill="black")
+        try:
+            # ——— 1) grab a fresh screenshot
+            screenshot = pyautogui.screenshot()
+            screen_w, screen_h = screenshot.size
 
-                # Click highlight - show for a brief period after click
-                current_time = time.perf_counter()
-                if last_click_time > 0 and (current_time - last_click_time) < click_duration:
-                    radius = 20
-                    # Draw multiple circles for better visibility
-                    draw.ellipse([
-                        (cursor_x - radius, cursor_y - radius),
-                        (cursor_x + radius, cursor_y + radius)
-                    ], outline="red", width=4)
-                    draw.ellipse([
-                        (cursor_x - radius//2, cursor_y - radius//2),
-                        (cursor_x + radius//2, cursor_y + radius//2)
-                    ], outline="yellow", width=2)
+            # ——— 2) get the real mouse position
+            cursor_x, cursor_y = pyautogui.position()
+            # clamp into bounds just in case
+            cursor_x = max(0, min(cursor_x, screen_w - 1))
+            cursor_y = max(0, min(cursor_y, screen_h - 1))
 
-                # Convert PIL image to OpenCV format for video
-                frame_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-                video_writer.write(frame_cv)
-                
-                # Store frame for GIF conversion (downsample for smaller GIF)
-                frames_for_gif.append(screenshot)
+            draw = ImageDraw.Draw(screenshot)
 
-                # Schedule next frame
-                next_capture_time += frame_interval
-                
-            except Exception as e:
-                print(f"Error capturing frame: {e}")
-                continue
+            # ——— 3) draw your custom cursor (green dot)
+            R = 8
+            draw.ellipse(
+                [(cursor_x - R, cursor_y - R), (cursor_x + R, cursor_y + R)],
+                fill="green"
+            )
+
+            # ——— 4) draw click‑highlight if we saw a click
+            elapsed_since_click = time.perf_counter() - last_click_time
+            if 0 < last_click_time and elapsed_since_click < click_duration:
+                # a bigger red ring + inner yellow ring
+                O = 20
+                draw.ellipse(
+                    [(cursor_x - O, cursor_y - O), (cursor_x + O, cursor_y + O)],
+                    outline="red", width=4
+                )
+                draw.ellipse(
+                    [(cursor_x - O//2, cursor_y - O//2), (cursor_x + O//2, cursor_y + O//2)],
+                    outline="yellow", width=2
+                )
+
+            # ——— 5) convert & write frame
+            frame_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+            video_writer.write(frame_cv)
+            frames_for_gif.append(screenshot)
+
+        except Exception as e:
+            print("Error capturing frame:", e)
+            continue
+
 
         else:
             time.sleep(0.005)  # Prevent CPU overuse
@@ -260,9 +270,10 @@ def on_hotkey():
 
 # MAIN
 if __name__ == '__main__':
+    setup_tray()
     # Start mouse listener first
     mouse_listener = mouse.Listener(on_click=on_click)
     mouse_listener.start()
     
     # Setup tray (this will block until app exits)
-    setup_tray()
+    # setup_tray()
