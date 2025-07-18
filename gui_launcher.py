@@ -266,7 +266,7 @@ class AutoDocsBar(QtWidgets.QWidget):
     def init_ui(self):
         # Initial size and position
         self.normal_width, self.normal_height = 700, 80  # Increased width for more buttons
-        self.minimized_height = 30  # 1-2 mm on most screens
+        self.minimized_height = 45  # Increased to properly show recording text
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         x = (screen.width() - self.normal_width) // 2
         y = screen.height() - self.normal_height - 20
@@ -408,11 +408,12 @@ class AutoDocsBar(QtWidgets.QWidget):
 
         self.minimal_label = QtWidgets.QLabel('🔴 Recording...')
         self.minimal_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.minimal_label.setStyleSheet('color: rgba(255, 0, 0, 100); font-size: 12px; font-weight: bold;')
+        self.minimal_label.setStyleSheet('color: rgba(255, 0, 0, 180); font-size: 14px; font-weight: bold; padding: 8px;')
 
         self.layout.addWidget(self.minimal_label)
+        self.layout.setContentsMargins(8, 4, 8, 4)  # Add proper margins for text visibility
 
-        self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 50); border-radius: 4px;')
+        self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 80); border-radius: 6px;')
 
         self.update()
 
@@ -444,6 +445,10 @@ class AutoDocsBar(QtWidgets.QWidget):
         self.layout.addWidget(self.manage_btn)
         self.layout.addWidget(self.generate_btn)
         self.layout.addWidget(self.quit_btn)
+        
+        # Restore original layout margins
+        self.layout.setContentsMargins(16, 10, 16, 10)
+        
         self.bg.setStyleSheet('background-color: rgba(255, 255, 255, 180); border-radius: 12px;')
         self.update_theme()
         self.update()
@@ -752,12 +757,12 @@ Clips List:
         if self.is_minimized and hasattr(self, 'minimal_label') and self.minimal_label:
             if e.type() == QtCore.QEvent.HoverEnter:
                 # Make text and bar more opaque on hover
-                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 0.9); font-size: 12px; font-weight: bold;")
-                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 220); border-radius: 4px;")
+                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 220); font-size: 14px; font-weight: bold; padding: 8px;")
+                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 160); border-radius: 6px;")
             elif e.type() == QtCore.QEvent.HoverLeave:
                 # Make text and bar more transparent when not hovered
-                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 0.2); font-size: 12px; font-weight: bold;")
-                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 120); border-radius: 4px;")
+                self.minimal_label.setStyleSheet("color: rgba(255, 0, 0, 180); font-size: 14px; font-weight: bold; padding: 8px;")
+                self.bg.setStyleSheet("background-color: rgba(255, 255, 255, 80); border-radius: 6px;")
         return super().event(e)
 
 
