@@ -4,13 +4,15 @@ import time
 from PyQt5 import QtWidgets, QtCore, QtGui
 from autodocs_orchestrator import AutoDocsOrchestrator
 import numpy as np
+from pynput import mouse
+
 
 class ClipRecordDialog(QtWidgets.QDialog):
     """Dialog for recording a new clip with custom title and duration"""
     def __init__(self, parent=None, clip_count=0):
         super().__init__(parent)
         self.setWindowTitle("Record New Clip")
-        self.setMinimumSize(700, 400)  # Increased from 400, 250
+        self.setMinimumSize(700, 400)  # Increased from 200 to 400 
         self.setFixedSize(700, 400)    # Match minimum size
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
         
@@ -271,6 +273,8 @@ class AutoDocsBar(QtWidgets.QWidget):
         # Ensure margins are maintained
         self.layout.setContentsMargins(16, 10, 16, 10)
 
+        self.mouse_listener = None  # Add this line to store mouse listener
+
 
     def init_ui(self):
         # Initial size and position
@@ -505,6 +509,9 @@ class AutoDocsBar(QtWidgets.QWidget):
 
     def start_recording(self, title=None, duration=15):
 
+        self.mouse_listener = mouse.Listener(on_click=self.on_click)
+        self.mouse_listener.start()
+
         # initialize countdown
         self.remaining_time = duration
         self.countdown_timer.start()
@@ -518,6 +525,11 @@ class AutoDocsBar(QtWidgets.QWidget):
                 # Use orchestrator to record clip (without auto-processing like interactive mode)
                 clip = self.orchestrator.record_clip(duration=duration,
                                                     title=title)
+
+                                # Stop mouse listener when recording ends
+                if self.mouse_listener:
+                    self.mouse_listener.stop()
+                    self.mouse_listener = None
 
                 # 2) stop the countdown now that recording is done
                 QtCore.QTimer.singleShot(0, self.countdown_timer.stop)
@@ -543,6 +555,10 @@ class AutoDocsBar(QtWidgets.QWidget):
                 
             except Exception as e:
                 print(f'Error during recording: {e}')
+                 # Stop mouse listener on error too
+                if self.mouse_listener:
+                    self.mouse_listener.stop()
+                    self.mouse_listener = None
                 error_msg = f"❌ Recording failed: {str(e)}"
                 self.update_status_clean(error_msg)
                 
@@ -554,7 +570,17 @@ class AutoDocsBar(QtWidgets.QWidget):
                 threading.Thread(target=delayed_restore, daemon=True).start()
 
         threading.Thread(target=run_recording, daemon=True).start()
-    
+
+
+    def on_click(self, x, y, button, pressed):
+        """Handle mouse clicks during recording"""
+        if pressed:
+            print(f"Click detected at ({x}, {y})")  # Optional debugging
+            # Update the last click time in the orchestrator or recording module
+            if hasattr(self.orchestrator, 'update_last_click'):
+                self.orchestrator.update_last_click(time.perf_counter())
+
+
     def _update_countdown(self):
         if self.remaining_time > 0:
             self.remaining_time -= 1
