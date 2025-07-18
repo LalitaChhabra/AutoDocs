@@ -243,14 +243,10 @@ class AutoDocsOrchestrator:
                     from PIL import Image
                     static_image_path = gif_dest.with_suffix('.png')
                     
-                    # Open GIF and save first frame as PNG
-                    with Image.open(gif_dest) as img:
-                        # Convert to RGB if necessary (GIFs can be in palette mode)
-                        if img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        img.save(static_image_path, 'PNG')
+                    # Open GIF and save the gif
+                    run.add_picture(str(gif_dest), width=Inches(6))
                     
-                    # Add the static image to the Word document
+                    # Add the gif to the Word document
                     paragraph = doc.add_paragraph()
                     run = paragraph.runs[0] if paragraph.runs else paragraph.add_run()
                     

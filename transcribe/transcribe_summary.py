@@ -1,16 +1,11 @@
 from openai import AzureOpenAI
-import openai 
 import os 
 import requests 
+import requests.exceptions
 from dotenv import load_dotenv
 import re
 
 load_dotenv()
-openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
-openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
-openai.api_type = "azure"
-openai.api_version = "2025-01-01-preview"
-api_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 
 
 
@@ -52,39 +47,73 @@ def summarize_transcription(transcript):
     """
     Summarize the transcription using Azure OpenAI GPT-4o.
     """
+    try:
+        # Validate environment variables first
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        
+        if not api_key:
+            raise ValueError("Missing AZURE_OPENAI_API_KEY environment variable")
+        if not endpoint:
+            raise ValueError("Missing AZURE_OPENAI_ENDPOINT environment variable")
+        if not deployment:
+            raise ValueError("Missing AZURE_OPENAI_DEPLOYMENT environment variable")
+        
+        print(f"Connecting to Azure OpenAI endpoint: {endpoint}")
+        print(f"Using deployment: {deployment}")
+        
+        client = AzureOpenAI(
+            api_key=api_key,
+            api_version="2024-02-15-preview",
+            azure_endpoint=endpoint,
+            timeout=30.0  # Add timeout
+        )
 
-    client = AzureOpenAI(
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version="2024-02-15-preview",
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
-    )
+        response = client.chat.completions.create(
+            model=deployment,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that summarizes tutorials into clear instructions."
+                },
+                {
+                    "role": "user",
+                    "content": f"Please summarize the following tutorial into a 1 step short 2-3 sentence summary:\n\n{transcript}"
+                }
+            ],
+            temperature=0.3,
+            max_tokens=800
+        )
+        
+        if not response.choices or not response.choices[0].message:
+            raise ValueError("No valid response from the model.")
 
-    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        result = response.choices[0].message.content
 
-    response = client.chat.completions.create(
-        model=deployment,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant that summarizes tutorials into clear instructions."
-            },
-            {
-                "role": "user",
-                "content": f"Please summarize the following tutorial into a 1 step short 2-3 sentence summary:\n\n{transcript}"
-            }
-        ],
-        temperature=0.3,
-        max_tokens=800
-    )
-    if not response.choices or not response.choices[0].message:
-        raise ValueError("No valid response from the model.")
+        result = clean_summary(result)  # Clean the summary to remove unwanted formatting
 
-    result = response.choices[0].message.content
-
-    result = clean_summary(result)  # Clean the summary to remove unwanted formatting
-
-    # Return the summarized content
-    return result
+        # Return the summarized content
+        return result
+        
+    except requests.exceptions.ConnectionError as e:
+        print(f"Network connection error: {str(e)}")
+        raise Exception(f"Network connection error. Please check your internet connection and Azure OpenAI endpoint configuration.")
+    except requests.exceptions.Timeout as e:
+        print(f"Request timeout error: {str(e)}")
+        raise Exception(f"Request timed out. The Azure OpenAI service may be slow or unavailable.")
+    except Exception as e:
+        print(f"Error in summarize_transcription: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        # Check if it's an authentication error
+        if "401" in str(e) or "unauthorized" in str(e).lower():
+            raise Exception(f"Authentication error. Please check your AZURE_OPENAI_API_KEY.")
+        elif "404" in str(e):
+            raise Exception(f"Service not found. Please check your AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT.")
+        elif "429" in str(e):
+            raise Exception(f"Rate limit exceeded. Please wait and try again.")
+        else:
+            raise Exception(f"Azure OpenAI error: {str(e)}")
 
 
 def clean_summary(summary: str) -> str:

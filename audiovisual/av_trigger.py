@@ -81,7 +81,7 @@ def record_screen(ts, start_event, duration):
 
                 # Click highlight - show for a brief period after click
                 current_time = time.perf_counter()
-                if mouse_clicked or (current_time - last_click_time) < click_duration:
+                if last_click_time > 0 and (current_time - last_click_time) < click_duration:
                     radius = 20
                     # Draw multiple circles for better visibility
                     draw.ellipse([
@@ -121,7 +121,7 @@ def record_screen(ts, start_event, duration):
     # Convert to GIF
     try:
         print(f"🎥 Converting video to GIF...")
-        imageio.mimsave(gif_file, frames_for_gif, duration=frame_interval)
+        imageio.mimsave(gif_file, frames_for_gif, duration=frame_interval, loop=0)
         print(f"🎥 GIF created: {gif_file}")
     except Exception as e:
         print(f"Error creating GIF: {e}")
@@ -250,7 +250,7 @@ def on_click(x, y, button, pressed):
     if pressed:
         mouse_clicked = True
         last_click_time = time.perf_counter()
-        print(f"🖱️ Click detected at ({x}, {y})")
+        # Removed terminal output for cleaner recording
     else:
         mouse_clicked = False
 
