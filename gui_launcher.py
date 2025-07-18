@@ -342,7 +342,7 @@ class AutoDocsBar(QtWidgets.QWidget):
         self.quit_btn.setFixedSize(30, 30)
         self.quit_btn.setStyleSheet(
             '''
-            QPushButton {background-color: #d9534f; color: white; padding: 5px;
+            QPushButton {background-color: #f5f5f5; color: white; padding: 5px;
                         border-radius: 5px; font-weight: bold;}
             QPushButton:hover {background-color: #c9302c;}
             '''
