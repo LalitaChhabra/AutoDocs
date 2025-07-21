@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from autodocs_orchestrator import AutoDocsOrchestrator
 import numpy as np
 from pynput import mouse
+import audiovisual.av_trigger
 
 
 class ClipRecordDialog(QtWidgets.QDialog):
@@ -579,6 +580,8 @@ class AutoDocsBar(QtWidgets.QWidget):
             # Update the last click time in the orchestrator or recording module
             if hasattr(self.orchestrator, 'update_last_click'):
                 self.orchestrator.update_last_click(time.perf_counter())
+            
+            audiovisual.av_trigger.last_click_time = time.perf_counter() # update global last click time
 
 
     def _update_countdown(self):

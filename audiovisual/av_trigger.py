@@ -293,11 +293,8 @@ def on_hotkey():
 
 # MAIN
 if __name__ == '__main__':
-    setup_tray()
     # Start mouse listener first
     mouse_listener = mouse.Listener(on_click=on_click)
     mouse_listener.start()
-    
-    # Setup tray (this will block until app exits)
-    # setup_tray()
-    # setup_tray()
+
+    setup_tray()
