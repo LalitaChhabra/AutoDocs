@@ -10,7 +10,7 @@ import keyboard
 import time
 import os
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageStat
 from pystray import Icon, MenuItem, Menu
 from plyer import notification
 
@@ -86,12 +86,39 @@ def record_screen(ts, start_event, duration):
 
             draw = ImageDraw.Draw(screenshot)
 
-            # ——— 3) draw your custom cursor (green dot)
-            R = 8
-            draw.ellipse(
-                [(cursor_x - R, cursor_y - R), (cursor_x + R, cursor_y + R)],
-                fill="green"
-            )
+            # ——— 3a) sample a small region around the cursor to decide light vs dark background
+            sample_size = 9
+            left = max(0, cursor_x - sample_size//2)
+            upper = max(0, cursor_y - sample_size//2)
+            right = min(screen_w, left + sample_size)
+            lower = min(screen_h, upper + sample_size)
+            region = screenshot.crop((left, upper, right, lower)).convert("L")
+            mean_lum = ImageStat.Stat(region).mean[0]
+
+            # if background is bright, draw black cursor; if dark, draw white
+            if mean_lum > 160:
+                fill_col = "black"
+                outline_col = "white"
+            else:
+                fill_col = "white"
+                outline_col = "black"
+
+            # ——— 3b) define a Windows‑style arrow (proper shape)
+            arrow = [
+                (cursor_x, cursor_y),                    # tip
+                (cursor_x + 3, cursor_y + 15),          # left side down
+                (cursor_x + 8, cursor_y + 12),          # notch left
+                (cursor_x + 12, cursor_y + 18),         # bottom left
+                (cursor_x + 15, cursor_y + 16),         # bottom right
+                (cursor_x + 11, cursor_y + 8),          # notch right (moved right and up)
+                (cursor_x + 17, cursor_y + 2),          # right side (moved right and up)
+                (cursor_x, cursor_y),                    # back to tip (close polygon)
+            ]
+
+            # draw the outline slightly thicker for visibility
+            draw.polygon(arrow, fill=outline_col, width=2)
+            # draw the inner fill
+            draw.polygon(arrow, fill=fill_col, outline=outline_col, width=1)
 
             # ——— 4) draw click‑highlight if we saw a click
             elapsed_since_click = time.perf_counter() - last_click_time
@@ -115,10 +142,6 @@ def record_screen(ts, start_event, duration):
         except Exception as e:
             print("Error capturing frame:", e)
             continue
-
-
-        else:
-            time.sleep(0.005)  # Prevent CPU overuse
 
     # Release video writer
     video_writer.release()
@@ -276,4 +299,5 @@ if __name__ == '__main__':
     mouse_listener.start()
     
     # Setup tray (this will block until app exits)
+    # setup_tray()
     # setup_tray()
