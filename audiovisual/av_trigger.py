@@ -86,32 +86,6 @@ def record_screen(ts, start_event, duration):
 
             draw = ImageDraw.Draw(screenshot)
 
-            # ——— 3) draw click‑highlight if we saw a click
-            if 0 < last_click_time and (time.perf_counter() - last_click_time) < click_duration:
-                O = 20
-
-                # 1) make sure our image is RGBA
-                base = screenshot.convert("RGBA")
-
-                # 2) create a transparent overlay
-                overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
-                od = ImageDraw.Draw(overlay)
-
-                # 3) draw semi‑transparent yellow fill
-                #    (255,255,0,128) → yellow at 50% opacity
-                bbox = [(cursor_x - O, cursor_y - O), (cursor_x + O, cursor_y + O)]
-                od.ellipse(bbox, fill=(255, 255, 0, 128))
-
-                # 4) composite the overlay onto the frame
-                composed = Image.alpha_composite(base, overlay)
-
-                # 5) draw the red outline on top
-                draw2 = ImageDraw.Draw(composed)
-                draw2.ellipse(bbox, outline="red", width=4)
-
-                # 6) convert back to RGB for your video writer
-                screenshot = composed.convert("RGB")
-
             # ——— 4a) sample a small region around the cursor to decide light vs dark background
             sample_size = 9
             left = max(0, cursor_x - sample_size//2)
@@ -145,6 +119,32 @@ def record_screen(ts, start_event, duration):
             draw.polygon(arrow, fill=outline_col, width=2)
             # draw the inner fill
             draw.polygon(arrow, fill=fill_col, outline=outline_col, width=1)
+
+            # ——— 3) draw click‑highlight if we saw a click
+            if 0 < last_click_time and (time.perf_counter() - last_click_time) < click_duration:
+                O = 20
+
+                # 1) make sure our image is RGBA
+                base = screenshot.convert("RGBA")
+
+                # 2) create a transparent overlay
+                overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+                od = ImageDraw.Draw(overlay)
+
+                # 3) draw semi‑transparent yellow fill
+                #    (255,255,0,128) → yellow at 50% opacity
+                bbox = [(cursor_x - O, cursor_y - O), (cursor_x + O, cursor_y + O)]
+                od.ellipse(bbox, fill=(255, 255, 0, 128))
+
+                # 4) composite the overlay onto the frame
+                composed = Image.alpha_composite(base, overlay)
+
+                # 5) draw the red outline on top
+                draw2 = ImageDraw.Draw(composed)
+                draw2.ellipse(bbox, outline="red", width=4)
+
+                # 6) convert back to RGB for your video writer
+                screenshot = composed.convert("RGB")
 
             # ——— 5) convert & write frame
             frame_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
