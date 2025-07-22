@@ -86,7 +86,7 @@ def record_screen(ts, start_event, duration):
 
             draw = ImageDraw.Draw(screenshot)
 
-            # ——— 4a) sample a small region around the cursor to decide light vs dark background
+            # ——— 3a) sample a small region around the cursor to decide light vs dark background
             sample_size = 9
             left = max(0, cursor_x - sample_size//2)
             upper = max(0, cursor_y - sample_size//2)
@@ -103,7 +103,7 @@ def record_screen(ts, start_event, duration):
                 fill_col = "white"
                 outline_col = "black"         
 
-            # ——— 4b) define a Windows‑style arrow (proper shape)
+            # ——— 3b) define a Windows‑style arrow (proper shape)
             arrow = [
                 (cursor_x, cursor_y),                    # tip
                 (cursor_x + 3, cursor_y + 15),          # left side down
@@ -120,30 +120,34 @@ def record_screen(ts, start_event, duration):
             # draw the inner fill
             draw.polygon(arrow, fill=fill_col, outline=outline_col, width=1)
 
-            # ——— 3) draw click‑highlight if we saw a click
+            # ——— 4) draw click‑highlight if we saw a click
             if 0 < last_click_time and (time.perf_counter() - last_click_time) < click_duration:
                 O = 20
 
-                # 1) make sure our image is RGBA
+                # make sure our image is RGBA
                 base = screenshot.convert("RGBA")
 
-                # 2) create a transparent overlay
+                # create a transparent overlay
                 overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
                 od = ImageDraw.Draw(overlay)
 
-                # 3) draw semi‑transparent yellow fill
+                # draw semi‑transparent yellow fill
                 #    (255,255,0,128) → yellow at 50% opacity
-                bbox = [(cursor_x - O, cursor_y - O), (cursor_x + O, cursor_y + O)]
+                # Adjust the highlight to be centered on the arrow
+                arrow_center_x = sum([point[0] for point in arrow]) // len(arrow)
+                arrow_center_y = sum([point[1] for point in arrow]) // len(arrow)
+
+                bbox = [(arrow_center_x - O, arrow_center_y - O), (arrow_center_x + O, arrow_center_y + O)]
                 od.ellipse(bbox, fill=(255, 255, 0, 128))
 
-                # 4) composite the overlay onto the frame
+                # composite the overlay onto the frame
                 composed = Image.alpha_composite(base, overlay)
 
-                # 5) draw the red outline on top
+                # draw the red outline on top
                 draw2 = ImageDraw.Draw(composed)
                 draw2.ellipse(bbox, outline="red", width=4)
 
-                # 6) convert back to RGB for your video writer
+                # convert back to RGB for your video writer
                 screenshot = composed.convert("RGB")
 
             # ——— 5) convert & write frame
