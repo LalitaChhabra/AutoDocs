@@ -20,7 +20,7 @@ AutoDocs is a Python-based tool for recording your screen and audio, then automa
 
 - Python 3.8+
 - Azure OpenAI API access (for transcription and summarization)
-- Windows OS recommended (tested)
+- Windows 11 OS recommended (tested)
 
 ## Installation
 
