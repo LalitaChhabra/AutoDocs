@@ -1,6 +1,6 @@
 # AutoDocs
 
-AutoDocs is a Python-based tool for recording your screen and audio, then automatically generating professional documentation (Markdown, HTML, Word) using AI-powered transcription and summarization. It is designed for creating tutorials, guides, and step-by-step documentation with minimal effort.
+AutoDocs is a Python-based tool for recording your screen and audio, then automatically generating professional documentation (Markdown, HTML) using AI-powered transcription and summarization. It is designed for creating tutorials, guides, and step-by-step documentation with minimal effort.
 
 ## Features
 
@@ -13,7 +13,6 @@ AutoDocs is a Python-based tool for recording your screen and audio, then automa
 - **Output Formats**:
   - Markdown (.md)
   - HTML (.html) with embedded GIFs and audio
-  - Word (.docx)
 - **GUI & CLI Modes**: Use a modern PyQt5 GUI or a command-line interface.
 - **Session Details**: View session summaries and detailed clip info.
 
@@ -60,7 +59,7 @@ python gui_launcher.py
 This launches a floating control bar with buttons to:
 - **Record**: Start a new screen/audio recording
 - **Manage**: View and process recorded clips
-- **Generate**: Create documentation (Markdown, HTML, Word)
+- **Generate**: Create documentation (Markdown, HTML)
 
 ### Command Line Mode
 
@@ -93,7 +92,7 @@ python main.py --quick
 
 1. **Record**: Capture screen and audio clips
 2. **Process**: Transcribe and summarize clips using Azure OpenAI
-3. **Generate**: Create Markdown, HTML, or Word documentation
+3. **Generate**: Create Markdown, or HTML documentation
 4. **Review**: Manage sessions and view detailed info
 
 ## Azure Integration
