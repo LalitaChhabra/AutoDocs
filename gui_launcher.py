@@ -616,9 +616,6 @@ class AutoDocsBar(QtWidgets.QWidget):
         status_action.setEnabled(False)  # Make it non-clickable info
         menu.addSeparator()
         
-        word_action = menu.addAction("📄 Generate Word Document")
-        word_action.triggered.connect(self.generate_word_doc)
-        
         markdown_action = menu.addAction("📝 Generate Markdown Document")
         markdown_action.triggered.connect(self.generate_markdown_doc)
         
