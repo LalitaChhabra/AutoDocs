@@ -10,7 +10,7 @@ import keyboard
 import time
 import os
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageStat
 from pystray import Icon, MenuItem, Menu
 from plyer import notification
 
@@ -86,26 +86,69 @@ def record_screen(ts, start_event, duration):
 
             draw = ImageDraw.Draw(screenshot)
 
-            # ——— 3) draw your custom cursor (green dot)
-            R = 8
-            draw.ellipse(
-                [(cursor_x - R, cursor_y - R), (cursor_x + R, cursor_y + R)],
-                fill="green"
-            )
+            # ——— 3a) sample a small region around the cursor to decide light vs dark background
+            sample_size = 9
+            left = max(0, cursor_x - sample_size//2)
+            upper = max(0, cursor_y - sample_size//2)
+            right = min(screen_w, left + sample_size)
+            lower = min(screen_h, upper + sample_size)
+            region = screenshot.crop((left, upper, right, lower)).convert("L")
+            mean_lum = ImageStat.Stat(region).mean[0]
+
+            # if background is bright, draw black cursor; if dark, draw white
+            if mean_lum > 160:
+                fill_col = "black"
+                outline_col = "white"
+            else:
+                fill_col = "white"
+                outline_col = "black"         
+
+            # ——— 3b) define a Windows‑style arrow (proper shape)
+            arrow = [
+                (cursor_x, cursor_y),                    # tip
+                (cursor_x + 3, cursor_y + 15),          # left side down
+                (cursor_x + 8, cursor_y + 12),          # notch left
+                (cursor_x + 12, cursor_y + 18),         # bottom left
+                (cursor_x + 15, cursor_y + 16),         # bottom right
+                (cursor_x + 11, cursor_y + 8),          # notch right (moved right and up)
+                (cursor_x + 17, cursor_y + 2),          # right side (moved right and up)
+                (cursor_x, cursor_y),                    # back to tip (close polygon)
+            ]
+
+            # draw the outline slightly thicker for visibility
+            draw.polygon(arrow, fill=outline_col, width=2)
+            # draw the inner fill
+            draw.polygon(arrow, fill=fill_col, outline=outline_col, width=1)
 
             # ——— 4) draw click‑highlight if we saw a click
-            elapsed_since_click = time.perf_counter() - last_click_time
-            if 0 < last_click_time and elapsed_since_click < click_duration:
-                # a bigger red ring + inner yellow ring
+            if 0 < last_click_time and (time.perf_counter() - last_click_time) < click_duration:
                 O = 20
-                draw.ellipse(
-                    [(cursor_x - O, cursor_y - O), (cursor_x + O, cursor_y + O)],
-                    outline="red", width=4
-                )
-                draw.ellipse(
-                    [(cursor_x - O//2, cursor_y - O//2), (cursor_x + O//2, cursor_y + O//2)],
-                    outline="yellow", width=2
-                )
+
+                # make sure our image is RGBA
+                base = screenshot.convert("RGBA")
+
+                # create a transparent overlay
+                overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+                od = ImageDraw.Draw(overlay)
+
+                # draw semi‑transparent yellow fill
+                #    (255,255,0,128) → yellow at 50% opacity
+                # Adjust the highlight to be centered on the arrow
+                arrow_center_x = sum([point[0] for point in arrow]) // len(arrow)
+                arrow_center_y = sum([point[1] for point in arrow]) // len(arrow)
+
+                bbox = [(arrow_center_x - O, arrow_center_y - O), (arrow_center_x + O, arrow_center_y + O)]
+                od.ellipse(bbox, fill=(255, 255, 0, 128))
+
+                # composite the overlay onto the frame
+                composed = Image.alpha_composite(base, overlay)
+
+                # draw the red outline on top
+                draw2 = ImageDraw.Draw(composed)
+                draw2.ellipse(bbox, outline="red", width=4)
+
+                # convert back to RGB for your video writer
+                screenshot = composed.convert("RGB")
 
             # ——— 5) convert & write frame
             frame_cv = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
@@ -115,10 +158,6 @@ def record_screen(ts, start_event, duration):
         except Exception as e:
             print("Error capturing frame:", e)
             continue
-
-
-        else:
-            time.sleep(0.005)  # Prevent CPU overuse
 
     # Release video writer
     video_writer.release()
@@ -270,10 +309,8 @@ def on_hotkey():
 
 # MAIN
 if __name__ == '__main__':
-    setup_tray()
     # Start mouse listener first
     mouse_listener = mouse.Listener(on_click=on_click)
     mouse_listener.start()
-    
-    # Setup tray (this will block until app exits)
-    # setup_tray()
+
+    setup_tray()
